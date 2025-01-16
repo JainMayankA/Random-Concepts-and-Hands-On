@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DEVICE: cpu
+      THRESHOLD: "0.5"
+      MODEL_CHECKPOINT: ""
+    volumes:
+      - ./model/checkpoints:/app/model/checkpoints:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
