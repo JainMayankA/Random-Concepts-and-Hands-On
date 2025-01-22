@@ -1,3 +1,4 @@
+import random
 import time
 import redis
 from dataclasses import dataclass
@@ -23,7 +24,7 @@ class RateLimiter:
         ts_key = f"tb:{key}:ts"
         refill_rate = capacity / window_seconds  # tokens per second
 
-        for _ in range(10):  # retry on conflict
+        for attempt in range(10):  # retry on conflict
             try:
                 with self.redis.pipeline() as pipe:
                     pipe.watch(bucket_key, ts_key)
@@ -47,6 +48,7 @@ class RateLimiter:
                         wait_secs = (1 - tokens) / refill_rate
                         return LimitResult(allowed=False, remaining=0, retry_after_ms=int(wait_secs * 1000))
             except redis.WatchError:
+                time.sleep(random.uniform(0.001, 0.01) * (attempt + 1))
                 continue
 
         return LimitResult(allowed=False, remaining=0, retry_after_ms=100)
@@ -78,8 +80,10 @@ class RateLimiter:
             )
         else:
             # Remove the entry we just added since we're blocking
-            self.redis.zrem(sw_key, str(now_ms))
-            oldest = self.redis.zrange(sw_key, 0, 0, withscores=True)
+            with self.redis.pipeline(transaction=True) as pipe:
+                pipe.zrem(sw_key, str(now_ms))
+                pipe.zrange(sw_key, 0, 0, withscores=True)
+                zrem_result, oldest = pipe.execute()
             if oldest:
                 retry_ms = int(oldest[0][1]) + window_ms - now_ms
                 retry_ms = max(0, retry_ms)

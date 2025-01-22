@@ -80,23 +80,25 @@ class ChestXRayModel(nn.Module):
         self.train()  # need gradients
         self.zero_grad()
 
-        logits = self.forward(x)
-        score = logits[0, class_idx]
-        score.backward()
+        try:
+            logits = self.forward(x)
+            score = logits[0, class_idx]
+            score.backward()
 
         # Pool gradients over spatial dims → (C,)
-        weights = self._gradients.mean(dim=(2, 3), keepdim=True)  # (1, C, 1, 1)
+            weights = self._gradients.mean(dim=(2, 3), keepdim=True)  # (1, C, 1, 1)
 
-        # Weighted combination of activation maps
-        cam = (weights * self._activations).sum(dim=1, keepdim=True)  # (1, 1, H, W)
-        cam = torch.relu(cam).squeeze().cpu().numpy()
+            # Weighted combination of activation maps
+            cam = (weights * self._activations).sum(dim=1, keepdim=True)  # (1, 1, H, W)
+            cam = torch.relu(cam).squeeze().cpu().numpy()
 
-        # Normalize to [0, 1]
-        if cam.max() > 0:
-            cam = cam / cam.max()
+            # Normalize to [0, 1]
+            if cam.max() > 0:
+                cam = cam / cam.max()
 
-        self.eval()
-        return cam.astype(np.float32)
+            return cam.astype(np.float32)
+        finally:
+            self.eval()
 
 
 def load_model(checkpoint_path: Optional[str] = None, device: str = "cpu") -> ChestXRayModel:

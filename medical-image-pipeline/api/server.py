@@ -18,6 +18,9 @@ from pydantic import BaseModel
 from pipeline.inference import InferenceEngine, InferenceConfig
 from model.classifier import LABELS
 
+NUM_CLASSES = len(LABELS)
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -78,8 +81,8 @@ async def predict(
     if content_type not in allowed and not file.filename.endswith(".dcm"):
         raise HTTPException(status_code=415, detail=f"Unsupported file type: {content_type}")
 
-    image_bytes = await file.read()
-    if len(image_bytes) > 50 * 1024 * 1024:  # 50MB limit
+    image_bytes = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(image_bytes) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="File too large (max 50MB)")
 
     engine = get_engine()
@@ -123,6 +126,3 @@ async def predict_batch(files: list[UploadFile] = File(...)):
             results.append({"filename": f.filename, "error": str(e)})
 
     return {"predictions": results, "count": len(results)}
-
-
-NUM_CLASSES = len(LABELS)

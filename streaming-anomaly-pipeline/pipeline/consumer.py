@@ -78,8 +78,11 @@ class MetricConsumer:
                     for msg in messages:
                         self._accumulate(msg.value)
 
-                self._flush_ready()
-                self.consumer.commit()
+                flush_failed = self._flush_ready()
+                if not flush_failed:
+                    self.consumer.commit()
+                else:
+                    logger.warning("Skipping commit — batch processing had failures, will reprocess")
         except KeyboardInterrupt:
             pass
         finally:
@@ -104,13 +107,14 @@ class MetricConsumer:
         batch.values.append(event["value"])
         batch.timestamps.append(event["timestamp"])
 
-    def _flush_ready(self):
+    def _flush_ready(self) -> bool:
         now = time.monotonic()
         ready_keys = [
             k for k, start in self._batch_start.items()
             if (now - start) >= self.batch_window
             or len(self._batches[k].values) >= self.max_batch_size
         ]
+        flush_failed = False
         for key in ready_keys:
             batch = self._batches.pop(key)
             self._batch_start.pop(key)
@@ -118,4 +122,6 @@ class MetricConsumer:
                 try:
                     self.on_batch(batch)
                 except Exception as e:
+                    flush_failed = True
                     logger.error(f"Batch handler error for {key}: {e}", exc_info=True)
+        return flush_failed

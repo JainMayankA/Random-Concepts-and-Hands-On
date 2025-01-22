@@ -24,6 +24,8 @@ import random
 from dataclasses import dataclass, field
 from typing import Optional
 
+from sortedcontainers import SortedList
+
 
 @dataclass(frozen=True, order=True)
 class PositionComponent:
@@ -96,6 +98,9 @@ class LogootDoc:
             Entry(_MIN_POS, "", "__start__"),
             Entry(_MAX_POS, "", "__end__"),
         ]
+        self._sorted_positions: SortedList = SortedList(
+            [entry.position for entry in self._entries]
+        )
         self._op_index: dict[str, Entry] = {}
         self._clock = 0
 
@@ -158,10 +163,9 @@ class LogootDoc:
     # ── Internals ─────────────────────────────────────────────────────
 
     def _insert_entry(self, entry: Entry):
-        import bisect
-        keys = [e.position for e in self._entries]
-        idx = bisect.bisect_left(keys, entry.position)
+        idx = self._sorted_positions.bisect_left(entry.position)
         self._entries.insert(idx, entry)
+        self._sorted_positions.add(entry.position)
         self._op_index[entry.op_id] = entry
 
     def _visible_entries(self) -> list[Entry]:

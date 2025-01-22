@@ -46,7 +46,11 @@ class AnomalyResult:
 
 @dataclass
 class DetectorConfig:
-    contamination: float = 0.05   # expected fraction of anomalies
+    # contamination: expected fraction of outliers in training data.
+    # Must match the actual anomaly rate in your data.
+    # Set too high -> high false positive rate. Set too low -> misses real anomalies.
+    # Use 'auto' to let sklearn estimate from data if you are unsure.
+    contamination: float = 0.02
     window_size: int = 200         # rolling window for feature extraction
     retrain_interval: int = 500    # retrain model every N new samples
     n_estimators: int = 100
