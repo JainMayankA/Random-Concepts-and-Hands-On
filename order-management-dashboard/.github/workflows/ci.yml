@@ -1,18 +1,36 @@
 name: CI
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
+env:
+  JWT_SECRET: ci-test-secret-min-32-characters-long
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
-      - run: npm install
-      - run: npm run type-check
-      - run: npm run build
+
+      - name: Install dependencies
+        run: npm ci --frozen-lockfile
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

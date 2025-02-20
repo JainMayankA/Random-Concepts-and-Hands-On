@@ -3,24 +3,23 @@ import { getDashboardMetrics, getOrders } from '@/lib/api'
 import RevenueChart from '@/components/charts/RevenueChart'
 import StatusPieChart from '@/components/charts/StatusPieChart'
 import StatusBadge from '@/components/ui/StatusBadge'
-import { TrendingUp, ShoppingCart, Clock, CheckCircle } from 'lucide-react'
+import { TrendingUp, ShoppingCart, Clock, CheckCircle, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 
 async function MetricsAndCharts() {
-  // Fall back to demo data if backend is not running
   let metrics
   try {
     metrics = await getDashboardMetrics()
   } catch {
-    metrics = {
-      total_orders: 142, total_revenue: 48320.50, pending_orders: 23, delivered_today: 8,
-      orders_by_status: { placed: 12, confirmed: 11, shipped: 28, delivered: 85, cancelled: 6 },
-      revenue_trend: Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(); d.setDate(d.getDate() - (6 - i))
-        return { date: d.toISOString().split('T')[0], revenue: 4000 + Math.random() * 4000 }
-      }),
-    }
+    return (
+      <div className="card flex items-center gap-3 text-yellow-700 bg-yellow-50 border-yellow-100 mb-6">
+        <AlertTriangle size={16} className="shrink-0" />
+        <p className="text-sm">
+          Could not load metrics — backend is unavailable. Check that the API service is running.
+        </p>
+      </div>
+    )
   }
 
   const stats = [
@@ -67,7 +66,12 @@ async function RecentOrders() {
   try {
     orders = await getOrders({ limit: 8 })
   } catch {
-    orders = []
+    return (
+      <div className="card mt-5 flex items-center gap-3 text-yellow-700 bg-yellow-50 border-yellow-100">
+        <AlertTriangle size={16} className="shrink-0" />
+        <p className="text-sm">Could not load recent orders — backend is unavailable.</p>
+      </div>
+    )
   }
 
   return (
@@ -77,16 +81,18 @@ async function RecentOrders() {
         <Link href="/orders" className="text-xs text-blue-600 hover:underline">View all</Link>
       </div>
       {orders.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-8">No orders yet. Start the backend to see live data.</p>
+        <p className="text-sm text-gray-400 text-center py-8">No orders yet.</p>
       ) : (
         <table className="w-full text-sm">
-          <thead><tr className="text-xs text-gray-400 border-b border-gray-100">
-            <th className="text-left pb-2 font-medium">Order ID</th>
-            <th className="text-left pb-2 font-medium">Customer</th>
-            <th className="text-right pb-2 font-medium">Amount</th>
-            <th className="text-center pb-2 font-medium">Status</th>
-            <th className="text-right pb-2 font-medium">Placed</th>
-          </tr></thead>
+          <thead>
+            <tr className="text-xs text-gray-400 border-b border-gray-100">
+              <th className="text-left pb-2 font-medium">Order ID</th>
+              <th className="text-left pb-2 font-medium">Customer</th>
+              <th className="text-right pb-2 font-medium">Amount</th>
+              <th className="text-center pb-2 font-medium">Status</th>
+              <th className="text-right pb-2 font-medium">Placed</th>
+            </tr>
+          </thead>
           <tbody>
             {orders.map(o => (
               <tr key={o.order_id} className="border-b border-gray-50 hover:bg-gray-50">

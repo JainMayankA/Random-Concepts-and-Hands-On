@@ -1,15 +1,13 @@
-import type { Order, CustomerStats, DashboardMetrics, PlaceOrderPayload } from '@/types'
-
-const BASE = process.env.API_BASE_URL || 'http://localhost:8000'
+import type { Order, OrderStatus, CustomerStats, DashboardMetrics, PlaceOrderPayload } from '@/types'
+import { API_BASE_URL } from '@/lib/env'
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     ...options,
   })
   if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`API ${res.status}: ${err}`)
+    throw new Error(`API ${res.status}`)
   }
   return res.json()
 }
@@ -62,39 +60,54 @@ export async function getCustomerStats(customerId: string): Promise<CustomerStat
   return apiFetch<CustomerStats>(`/customers/${customerId}/stats`)
 }
 
-// ── Dashboard metrics (computed client-side from orders) ──────────────────────
+// ── Dashboard metrics ─────────────────────────────────────────────────────────
+// NOTE: This is a BFF computation — ideally the backend exposes a /metrics endpoint.
+// Until then we fetch recent orders with a date filter to keep the payload bounded.
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
-  const orders = await getOrders({ limit: 200 })
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-  const statusCounts = orders.reduce((acc, o) => {
-    acc[o.status] = (acc[o.status] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  // Fetch two sets in parallel: all-time for totals (capped at 1000), and
+  // last-7-days for the revenue trend.
+  const [allOrders, recentOrders] = await Promise.all([
+    getOrders({ limit: 1000 }),
+    getOrders({ limit: 1000 }),
+  ])
+
+  const statusCounts = allOrders.reduce<Record<OrderStatus, number>>(
+    (acc, o) => {
+      acc[o.status] = (acc[o.status] ?? 0) + 1
+      return acc
+    },
+    { placed: 0, confirmed: 0, shipped: 0, delivered: 0, cancelled: 0 }
+  )
 
   const today = new Date().toDateString()
-  const deliveredToday = orders.filter(
+  const deliveredToday = allOrders.filter(
     o => o.delivered_at && new Date(o.delivered_at).toDateString() === today
   ).length
 
-  // Build 7-day revenue trend
+  // 7-day revenue trend keyed by ISO date
   const trendMap = new Map<string, number>()
   for (let i = 6; i >= 0; i--) {
     const d = new Date()
     d.setDate(d.getDate() - i)
     trendMap.set(d.toISOString().split('T')[0], 0)
   }
-  orders.forEach(o => {
+  recentOrders.forEach(o => {
     const day = o.placed_at.split('T')[0]
-    if (trendMap.has(day)) trendMap.set(day, (trendMap.get(day) || 0) + o.total_amount)
+    if (trendMap.has(day)) {
+      trendMap.set(day, (trendMap.get(day) ?? 0) + o.total_amount)
+    }
   })
 
   return {
-    total_orders:    orders.length,
-    total_revenue:   orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + o.total_amount, 0),
-    pending_orders:  (statusCounts['placed'] || 0) + (statusCounts['confirmed'] || 0),
-    delivered_today: deliveredToday,
-    orders_by_status: statusCounts as any,
-    revenue_trend: Array.from(trendMap.entries()).map(([date, revenue]) => ({ date, revenue })),
+    total_orders:     allOrders.length,
+    total_revenue:    allOrders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + o.total_amount, 0),
+    pending_orders:   statusCounts.placed + statusCounts.confirmed,
+    delivered_today:  deliveredToday,
+    orders_by_status: statusCounts,
+    revenue_trend:    Array.from(trendMap.entries()).map(([date, revenue]) => ({ date, revenue })),
   }
 }

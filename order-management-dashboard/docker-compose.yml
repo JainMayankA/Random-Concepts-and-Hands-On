@@ -28,6 +28,12 @@ services:
     ports: ["3000:3000"]
     environment:
       API_BASE_URL: http://api:8000
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      # JWT_SECRET must be set — no default to prevent accidental insecure deployments.
+      # Generate one with: openssl rand -hex 32
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET env var must be set before starting}
       NODE_ENV: production
     depends_on: [api]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/auth/logout || exit 1"]
+      interval: 10s
+      retries: 5

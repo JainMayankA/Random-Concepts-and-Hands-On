@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(JWT_SECRET=ci-test-secret-min-32-characters-long npx tsc --noEmit)"
+    ]
+  }
+}

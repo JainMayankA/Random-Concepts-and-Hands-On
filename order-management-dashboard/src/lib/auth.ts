@@ -2,27 +2,24 @@ import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import bcrypt from 'bcryptjs'
 import type { User } from '@/types'
+import { JWT_SECRET as JWT_SECRET_STRING } from '@/lib/env'
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'dev-secret-change-in-production'
-)
+const SECRET = new TextEncoder().encode(JWT_SECRET_STRING)
 const COOKIE_NAME = 'omd_session'
 const EXPIRY = '8h'
 
-// Demo users — passwords stored as bcrypt hashes (cost 10)
-// Plain-text equivalents for demo: admin123 | manager123 | viewer123
 export const DEMO_USERS: (User & { passwordHash: string })[] = [
   {
     id: '1', email: 'admin@demo.com', name: 'Mayank Jain', role: 'admin',
-    passwordHash: '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // admin123
+    passwordHash: '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
   },
   {
     id: '2', email: 'manager@demo.com', name: 'Sarah Connor', role: 'manager',
-    passwordHash: '$2b$10$RqX9Z1FmvIYcLzGxKJp7OOzmNMFyD5JxJpDYHMEQ4xD6jqCi1QQiK', // manager123
+    passwordHash: '$2b$10$RqX9Z1FmvIYcLzGxKJp7OOzmNMFyD5JxJpDYHMEQ4xD6jqCi1QQiK',
   },
   {
     id: '3', email: 'viewer@demo.com', name: 'Bob Smith', role: 'viewer',
-    passwordHash: '$2b$10$Wz3kLpN2VtQHmRdX8S5uIekAhJGDVBT9sYqMzKfP0wXnCo6lE4UYa', // viewer123
+    passwordHash: '$2b$10$Wz3kLpN2VtQHmRdX8S5uIekAhJGDVBT9sYqMzKfP0wXnCo6lE4UYa',
   },
 ]
 
