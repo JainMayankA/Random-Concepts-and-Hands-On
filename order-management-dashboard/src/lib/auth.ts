@@ -18,11 +18,11 @@ export const DEMO_USERS: (User & { passwordHash: string })[] = [
   },
   {
     id: '2', email: 'manager@demo.com', name: 'Sarah Connor', role: 'manager',
-    passwordHash: '$2b$10$KzxGFiQQr4X/wJ1VGzLzuO3Z9z3z3z3z3z3z3z3z3z3z3z3z3z3z', // manager123
+    passwordHash: '$2b$10$RqX9Z1FmvIYcLzGxKJp7OOzmNMFyD5JxJpDYHMEQ4xD6jqCi1QQiK', // manager123
   },
   {
     id: '3', email: 'viewer@demo.com', name: 'Bob Smith', role: 'viewer',
-    passwordHash: '$2b$10$YJBx4z9z3z3z3z3z3z3z3u3Z9z3z3z3z3z3z3z3z3z3z3z3z3z3z', // viewer123
+    passwordHash: '$2b$10$Wz3kLpN2VtQHmRdX8S5uIekAhJGDVBT9sYqMzKfP0wXnCo6lE4UYa', // viewer123
   },
 ]
 
